@@ -97,12 +97,33 @@ uv run pytest
 
 ## Datasets
 
-| Dataset | Role | Source |
-|---------|------|--------|
-| UCI AI4I 2020 Predictive Maintenance | Primary | https://archive.ics.uci.edu/dataset/601/ai4i |
-| NASA PCoE Turbofan Engine Degradation Simulation | Secondary | https://zenodo.org/records/15346912 |
+| Dataset | Role | Nature | Licence | Source |
+|---------|------|--------|---------|--------|
+| UCI AI4I 2020 Predictive Maintenance | Primary | **Synthetic** | CC BY 4.0 | https://doi.org/10.24432/C5HS5C |
+| NASA PCoE Turbofan Engine Degradation Simulation | Secondary | Simulated | To be verified | https://zenodo.org/records/15346912 |
 
-Datasets are never committed to this repository. Each one keeps its original attribution and licence, and its source, version and preprocessing are recorded in `datasets/metadata/`. Synthetic data is never presented as real factory data.
+Datasets are never committed to this repository. Each one keeps its original attribution and licence, and its source, version, checksum and preprocessing are recorded in `datasets/metadata/`. Synthetic data is never presented as real factory data.
+
+```bash
+uv run python datasets/download_scripts/download_ai4i.py   # downloads and verifies the checksum
+```
+
+## Experiments
+
+### Experiment A: predictive maintenance models
+
+Compares a sensor alarm-limit baseline, Logistic Regression, Random Forest and XGBoost on AI4I 2020. Each seed uses a stratified 80/20 split, 5-fold cross-validation on the training split only, then one evaluation on the held-out test split. Failure-mode columns (TWF, HDF, PWF, OSF, RNF) are excluded from the features because they encode the target.
+
+```bash
+# Quick check (one seed)
+uv run python -m experiments.exp_a_predictive --seeds 0
+
+# Full run, e.g. on a cluster node: five seeds, all cores, both feature sets
+uv run python -m experiments.exp_a_predictive --feature-set raw --n-jobs -1
+uv run python -m experiments.exp_a_predictive --feature-set engineered --n-jobs -1
+```
+
+Results go to `experiments/results/exp_a/<timestamp>_<feature-set>/`: `results.json` (config, dataset checksum, environment, git commit, every run) and `summary.md`. The `engineered` features mirror how AI4I's synthetic failures were generated, so report both feature sets side by side.
 
 ## Contributing
 

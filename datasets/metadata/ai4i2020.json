@@ -1,0 +1,65 @@
+{
+  "id": "ai4i2020",
+  "name": "AI4I 2020 Predictive Maintenance Dataset",
+  "publisher": "UCI Machine Learning Repository",
+  "creator": "Stephan Matzka",
+  "doi": "10.24432/C5HS5C",
+  "landing_page": "https://archive.ics.uci.edu/dataset/601/ai4i+2020+predictive+maintenance+dataset",
+  "download_url": "https://archive.ics.uci.edu/static/public/601/ai4i+2020+predictive+maintenance+dataset.zip",
+  "license": "CC BY 4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "citation": "Matzka, S. (2020). AI4I 2020 Predictive Maintenance Dataset [Dataset]. UCI Machine Learning Repository. https://doi.org/10.24432/C5HS5C",
+  "data_nature": "synthetic",
+  "data_nature_note": "The publisher describes this as a synthetic dataset modelled on real predictive maintenance data. It is not real factory data and results on it must not be presented as such.",
+  "retrieved": "2026-11-21",
+  "file": {
+    "archive_member": "ai4i2020.csv",
+    "name": "ai4i2020.csv",
+    "sha256": "dc6630cd9b1f0f853922fad78a1b6436570d3f1ec863f1dd5c4340ac56bc8a8e",
+    "bytes": 522048,
+    "encoding": "utf-8-sig",
+    "rows": 10000
+  },
+  "columns": [
+    {"source": "UDI", "name": "udi", "unit": null, "role": "identifier"},
+    {"source": "Product ID", "name": "product_id", "unit": null, "role": "identifier"},
+    {"source": "Type", "name": "product_type", "unit": null, "role": "feature", "values": ["L", "M", "H"]},
+    {"source": "Air temperature [K]", "name": "air_temperature_k", "unit": "K", "role": "feature"},
+    {"source": "Process temperature [K]", "name": "process_temperature_k", "unit": "K", "role": "feature"},
+    {"source": "Rotational speed [rpm]", "name": "rotational_speed_rpm", "unit": "rpm", "role": "feature"},
+    {"source": "Torque [Nm]", "name": "torque_nm", "unit": "Nm", "role": "feature"},
+    {"source": "Tool wear [min]", "name": "tool_wear_min", "unit": "min", "role": "feature"},
+    {"source": "Machine failure", "name": "machine_failure", "unit": null, "role": "target"},
+    {"source": "TWF", "name": "twf", "unit": null, "role": "leakage", "description": "Tool wear failure mode"},
+    {"source": "HDF", "name": "hdf", "unit": null, "role": "leakage", "description": "Heat dissipation failure mode"},
+    {"source": "PWF", "name": "pwf", "unit": null, "role": "leakage", "description": "Power failure mode"},
+    {"source": "OSF", "name": "osf", "unit": null, "role": "leakage", "description": "Overstrain failure mode"},
+    {"source": "RNF", "name": "rnf", "unit": null, "role": "leakage", "description": "Random failure mode"}
+  ],
+  "profile": {
+    "null_values": 0,
+    "product_type_counts": {"L": 6000, "M": 2997, "H": 1003},
+    "machine_failure_rate": 0.0339,
+    "failure_mode_counts": {"twf": 46, "hdf": 115, "pwf": 95, "osf": 98, "rnf": 19},
+    "observed_ranges": {
+      "air_temperature_k": [295.3, 304.5],
+      "process_temperature_k": [305.7, 313.8],
+      "rotational_speed_rpm": [1168, 2886],
+      "torque_nm": [3.8, 76.6],
+      "tool_wear_min": [0, 253]
+    }
+  },
+  "known_quirks": [
+    "9 rows have machine_failure = 1 but no failure-mode flag set.",
+    "18 rows have rnf = 1 but machine_failure = 0.",
+    "The CSV starts with a UTF-8 byte-order mark; read it with encoding utf-8-sig.",
+    "Rows are independent samples, not a time series, so there is no temporal ordering to respect when splitting."
+  ],
+  "preprocessing": [
+    "Source columns are renamed to snake_case names listed above (core/ingestion/ai4i.py).",
+    "Identifier columns (udi, product_id) are never used as model features.",
+    "Failure-mode columns (twf, hdf, pwf, osf, rnf) are never used as model features: they directly encode the target.",
+    "product_type is one-hot encoded.",
+    "machine_failure is used as-is as the binary target; the quirks above are left unmodified and documented."
+  ]
+}

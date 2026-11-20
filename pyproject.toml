@@ -5,7 +5,13 @@ description = "An evidence-grounded AI operations agent for predictive maintenan
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "numpy>=2.1",
+    "pandas>=2.2",
+    "pydantic>=2.9",
+    "scikit-learn>=1.5",
+    "xgboost>=2.1",
+]
 
 [dependency-groups]
 dev = [

@@ -31,3 +31,6 @@ apps/dashboard/dist/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Experiment outputs (regenerate with the experiment scripts)
+experiments/results/
