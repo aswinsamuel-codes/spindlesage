@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+build/
+dist/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Datasets and experiment outputs (never commit raw data)
+datasets/raw/
+datasets/processed/
+*.csv
+*.parquet
+mlruns/
+mlartifacts/
+
+# Node / dashboard
+node_modules/
+apps/dashboard/dist/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
