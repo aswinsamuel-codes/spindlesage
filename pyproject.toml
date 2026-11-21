@@ -9,6 +9,7 @@ dependencies = [
     "anthropic>=1.0",
     "fastapi>=0.115",
     "numpy>=2.1",
+    "paho-mqtt>=2.1",
     "pandas>=2.2",
     "pydantic>=2.9",
     "scikit-learn>=1.5",
@@ -16,8 +17,15 @@ dependencies = [
     "xgboost>=2.1",
 ]
 
+[project.optional-dependencies]
+opcua = [
+    "asyncua>=1.1",
+]
+
 [dependency-groups]
 dev = [
+    "amqtt>=0.12.2",
+    "asyncua>=1.1",
     "httpx>=0.27",
     "pytest>=8.3",
     "ruff>=0.8",

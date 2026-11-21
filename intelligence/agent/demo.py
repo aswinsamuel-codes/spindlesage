@@ -12,39 +12,16 @@ from pathlib import Path
 
 from core.ingestion.ai4i import DEFAULT_PATH
 from core.machine_registry.registry import DEFAULT_REGISTRY_PATH, MachineRegistry
-from integrations.simulator.cnc import FAULT_TYPES, FaultEvent, SimulationConfig, simulate_cell
+from integrations.simulator.cnc import SimulationConfig, simulate_cell
+from integrations.simulator.scenarios import DEMO_MACHINE, SCENARIOS, scenario_fault
 from intelligence.agent.tools import AgentContext
 from intelligence.anomaly.monitor import AnomalyMonitor
 from intelligence.predictive.risk import FailureRiskModel
 from intelligence.retrieval.bm25 import DEFAULT_CORPUS_DIR, BM25Index
 
-SCENARIOS: tuple[str, ...] = ("healthy", *FAULT_TYPES)
-DEMO_MACHINE = "cnc-sim-01"
+__all__ = ["DEMO_MACHINE", "SCENARIOS", "build_demo_context", "scenario_fault"]
+
 _BASE = datetime(2026, 1, 5, tzinfo=UTC)
-_MAGNITUDE = {
-    "spindle_overheat": 7.0,
-    "torque_spike": 0.5,
-    "speed_drift": 200.0,
-    "sensor_flatline": 0.0,
-}
-
-
-def scenario_fault(scenario: str, live_start: datetime, live_duration: timedelta):
-    if scenario not in SCENARIOS:
-        raise ValueError(f"Unknown scenario {scenario!r}; choose from {SCENARIOS}")
-    if scenario == "healthy":
-        return ()
-    end = live_start + live_duration
-    return (
-        FaultEvent(
-            machine_id=DEMO_MACHINE,
-            fault_type=scenario,
-            start=end - timedelta(minutes=90),
-            end=end,
-            magnitude=_MAGNITUDE[scenario],
-            sensor="torque_nm" if scenario == "sensor_flatline" else None,
-        ),
-    )
 
 
 def build_demo_context(

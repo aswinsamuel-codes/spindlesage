@@ -219,7 +219,25 @@ cd apps/dashboard && npm ci && npm run build && cd ../..
 uv run python -m apps.api --demo-scenario spindle_overheat
 ```
 
-For development with hot reload, run the API on port 8000 and `npm run dev` in `apps/dashboard` (port 5173 proxies `/api` to the API). Sign in with an API key; it is kept only for the browser tab. All of them are simulated. The maintenance manuals in `knowledge/` are illustrative documents written for the simulated cell (see [knowledge/README.md](knowledge/README.md)).
+For development with hot reload, run the API on port 8000 and `npm run dev` in `apps/dashboard` (port 5173 proxies `/api` to the API). Sign in with an API key; it is kept only for the browser tab.
+
+## Machine connectivity: MQTT and OPC UA (read-only)
+
+Gateways bring telemetry in; nothing goes back out to a machine. The MQTT bridge only subscribes to `spindlesage/v1/<site>/<machine>/telemetry`. The OPC UA collector only browses and reads. Both forward to the API with an `ingest`-role key taken from `SPINDLESAGE_INGEST_KEY`. Tests check the gateway source for write operations, and confirm that the simulated OPC UA server refuses client writes.
+
+```bash
+uv run python -m apps.api.keys add --user gateway --role ingest   # then export SPINDLESAGE_INGEST_KEY=...
+
+# OPC UA: simulated cell server + collector (needs: uv sync --extra opcua)
+uv run python -m integrations.opcua server --scenario spindle_overheat --speed 60
+uv run python -m integrations.opcua collect
+
+# MQTT: simulated publisher + bridge (needs a broker, e.g. Mosquitto on 127.0.0.1:1883)
+uv run python -m integrations.mqtt publish --scenario torque_spike
+uv run python -m integrations.mqtt bridge
+```
+
+Topic scheme, OPC UA address space, security options and limits: [docs/integrations.md](docs/integrations.md). All of them are simulated. The maintenance manuals in `knowledge/` are illustrative documents written for the simulated cell (see [knowledge/README.md](knowledge/README.md)).
 
 ## Contributing
 
