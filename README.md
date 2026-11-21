@@ -166,7 +166,40 @@ uv run python -m intelligence.agent --scenario torque_spike --engine claude
 uv run python -m intelligence.agent --scenario torque_spike --mode sensor_only
 ```
 
-Scenarios: `healthy`, `spindle_overheat`, `torque_spike`, `speed_drift` and `sensor_flatline`. All of them are simulated. The maintenance manuals in `knowledge/` are illustrative documents written for the simulated cell (see [knowledge/README.md](knowledge/README.md)).
+Scenarios: `healthy`, `spindle_overheat`, `torque_spike`, `speed_drift` and `sensor_flatline`.
+
+## REST API and approval workflow
+
+A FastAPI service exposes telemetry, anomaly status, agent recommendations, human approvals and the audit trail. **It has no endpoint that sends anything to a machine.**
+
+```bash
+# 1. Create API keys (shown once; only hashes are stored in .spindlesage/, which git ignores)
+uv run python -m apps.api.keys add --user alice --role technician
+uv run python -m apps.api.keys add --user carol --role maintenance_lead
+
+# 2. Start the server on 127.0.0.1:8000 with simulated telemetry preloaded
+uv run python -m apps.api --demo-scenario spindle_overheat
+```
+
+Interactive docs are at http://127.0.0.1:8000/docs. Send the key as an `X-API-Key` header.
+
+| Role | Can |
+|---|---|
+| `viewer` | Read machines, telemetry, recommendations and approvals |
+| `ingest` | Send telemetry only (for gateways) |
+| `technician` | Read, request recommendations, mark approved actions as done |
+| `maintenance_lead` | Everything a technician can, plus approve or reject actions and read the audit trail |
+| `admin` | Read, ingest, read the audit trail. Admins cannot approve maintenance actions |
+
+Approval rules (hypothesis H4):
+- Every proposed action other than continued monitoring opens an approval request.
+- Only a maintenance lead can decide, and never on a recommendation they requested themselves (four-eyes rule).
+- Rejections, and approvals of stop requests, need a written note.
+- Requests expire after 8 hours (`SPINDLESAGE_APPROVAL_TTL_HOURS`).
+- Only approved actions can be marked completed.
+- Every change is written to a hash-chained audit trail in the same transaction. `GET /audit/verify` detects any edited or deleted record.
+
+Data is stored in SQLite (`.spindlesage/spindlesage.db`) for now. The anomaly monitor is calibrated on simulated healthy data at startup, and `/health` says so. All of them are simulated. The maintenance manuals in `knowledge/` are illustrative documents written for the simulated cell (see [knowledge/README.md](knowledge/README.md)).
 
 ## Contributing
 

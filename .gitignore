@@ -37,3 +37,6 @@ experiments/results/
 
 # Simulator output
 data/
+
+# Local API data: SQLite database and API key hashes
+.spindlesage/
