@@ -125,6 +125,27 @@ uv run python -m experiments.exp_a_predictive --feature-set engineered --n-jobs 
 
 Results go to `experiments/results/exp_a/<timestamp>_<feature-set>/`: `results.json` (config, dataset checksum, environment, git commit, every run) and `summary.md`. The `engineered` features mirror how AI4I's synthetic failures were generated, so report both feature sets side by side.
 
+### Experiment B: anomaly detection
+
+Compares threshold alarms with Isolation Forest on the simulated CNC cell, using raw and contextual features. Detectors train on healthy data, are calibrated to the same healthy flag rate on a separate healthy period, then are scored on a test period with labelled faults. Metrics: detection recall and precision, false alarms per operating hour, and detection delay, overall and per fault type.
+
+```bash
+uv run python -m experiments.exp_b_anomaly --seeds 0     # quick check, about 10 s
+uv run python -m experiments.exp_b_anomaly --n-jobs -1   # five seeds
+```
+
+Recorded results and how to read them: [research/experiment-log.md](research/experiment-log.md).
+
+## CNC cell simulator
+
+Generates **synthetic** CNC telemetry (jobs, tool changes, ambient drift) with labelled faults: spindle overheat, torque spike, speed drift and sensor flatline.
+
+```bash
+uv run python -m integrations.simulator --days 1 --machines 3 --faults 4 --out data/sim/cell.csv
+```
+
+This writes the readings CSV and a `.events.json` file with each fault's machine, type, start and end.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).

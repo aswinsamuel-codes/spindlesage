@@ -34,3 +34,6 @@ Thumbs.db
 
 # Experiment outputs (regenerate with the experiment scripts)
 experiments/results/
+
+# Simulator output
+data/
