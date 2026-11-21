@@ -20,8 +20,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--demo-scenario", help="preload simulated telemetry for this scenario")
     parser.add_argument("--engine", choices=("rules", "claude"))
+    parser.add_argument("--data-dir", help="folder for the database and API key file")
     args = parser.parse_args(argv)
 
+    if args.data_dir:
+        os.environ["SPINDLESAGE_DATA_DIR"] = args.data_dir
     if args.demo_scenario:
         os.environ["SPINDLESAGE_DEMO_SCENARIO"] = args.demo_scenario
     if args.engine:

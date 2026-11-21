@@ -40,3 +40,6 @@ data/
 
 # Local API data: SQLite database and API key hashes
 .spindlesage/
+
+# Local preview config (machine-specific paths)
+.claude/launch.json

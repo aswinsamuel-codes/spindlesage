@@ -199,7 +199,27 @@ Approval rules (hypothesis H4):
 - Only approved actions can be marked completed.
 - Every change is written to a hash-chained audit trail in the same transaction. `GET /audit/verify` detects any edited or deleted record.
 
-Data is stored in SQLite (`.spindlesage/spindlesage.db`) for now. The anomaly monitor is calibrated on simulated healthy data at startup, and `/health` says so. All of them are simulated. The maintenance manuals in `knowledge/` are illustrative documents written for the simulated cell (see [knowledge/README.md](knowledge/README.md)).
+Data is stored in SQLite (`.spindlesage/spindlesage.db`) for now. The anomaly monitor is calibrated on simulated healthy data at startup, and `/health` says so.
+
+## Operations dashboard
+
+A React + TypeScript dashboard (`apps/dashboard`) for technicians and maintenance leads:
+
+- **Machines:** a card per machine with alarm status, key readings and pending approvals.
+- **Machine detail:** an explanation of any alarm, six telemetry charts (with hover readouts, keyboard navigation and a table view), an "Ask the agent" button, recent recommendations and maintenance history.
+- **Recommendations:** findings and actions with clickable citations that open the cited evidence.
+- **Approvals:** approve, reject or complete actions, with the four-eyes rule shown in the UI.
+- **Audit trail:** every event, with a live chain-integrity check. Leads and admins only.
+
+Every page shows a banner saying the data is simulated and that SpindleSage never controls machines. Status is always shown with an icon and a label, never colour alone, and the dashboard follows the system's light or dark mode.
+
+```bash
+# Build once; the API then serves it at http://127.0.0.1:8000/dashboard/
+cd apps/dashboard && npm ci && npm run build && cd ../..
+uv run python -m apps.api --demo-scenario spindle_overheat
+```
+
+For development with hot reload, run the API on port 8000 and `npm run dev` in `apps/dashboard` (port 5173 proxies `/api` to the API). Sign in with an API key; it is kept only for the browser tab. All of them are simulated. The maintenance manuals in `knowledge/` are illustrative documents written for the simulated cell (see [knowledge/README.md](knowledge/README.md)).
 
 ## Contributing
 

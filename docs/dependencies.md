@@ -27,9 +27,21 @@ Transitive runtime dependencies pulled in by these (scipy, threadpoolctl, python
 | httpx | BSD-3-Clause | FastAPI test client |
 | ruff | MIT | Linting and formatting |
 
+## Dashboard (npm, apps/dashboard)
+
+| Package | Licence | Purpose |
+|---|---|---|
+| react, react-dom | MIT | UI |
+| vite, @vitejs/plugin-react | MIT | Dev server and build |
+| typescript | Apache-2.0 | Type checking |
+| vitest, jsdom | MIT | Tests |
+| @testing-library/react, user-event, jest-dom | MIT | Component tests |
+
+Versions are locked in `apps/dashboard/package-lock.json`. No charting library: the line charts are plain SVG.
+
 ## Planned (not yet added)
 
-MLflow (Apache-2.0), paho-mqtt (EPL-2.0 / EDL-1.0, needs review), asyncua (LGPL-3.0, needs review), React (MIT). Licences in this list are as commonly published and must be confirmed against the exact version when each is added.
+MLflow (Apache-2.0), paho-mqtt (EPL-2.0 / EDL-1.0, needs review), asyncua (LGPL-3.0, needs review). Licences in this list are as commonly published and must be confirmed against the exact version when each is added.
 
 ## Decisions
 

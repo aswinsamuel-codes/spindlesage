@@ -9,10 +9,12 @@ those writes an audit record.
 # No "from __future__ import annotations" in this module: FastAPI must resolve
 # the dependency aliases defined inside create_app() when routes are declared.
 
+from pathlib import Path
 from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from apps.api.auth import ApiKeyRegistry
@@ -26,6 +28,7 @@ from intelligence.agent.tools import AgentContext
 
 API_VERSION = "0.1.0"
 MIN_READINGS_FOR_AGENT = 10
+DASHBOARD_DIST = Path(__file__).resolve().parents[1] / "dashboard" / "dist"
 
 
 class TelemetryBatch(BaseModel):
@@ -44,6 +47,7 @@ def create_app(
     settings: Settings | None = None,
     services: Services | None = None,
     keys: ApiKeyRegistry | None = None,
+    dashboard_dir: Path | None = None,
 ) -> FastAPI:
     settings = settings or Settings.from_env()
     services = services or build_services(settings)
@@ -316,5 +320,20 @@ def create_app(
     @app.get("/audit/verify")
     def verify_audit(_: Annotated[Principal, Depends(require(Permission.READ_AUDIT))]) -> dict:
         return services.store.verify_audit_chain().to_dict()
+
+    # -- dashboard ----------------------------------------------------------------------
+    # The built React dashboard (npm run build in apps/dashboard) is served from the
+    # same origin, so no CORS is needed. Static files carry no data; every data call
+    # still goes through the authenticated endpoints above.
+    if (dashboard_dir or DASHBOARD_DIST).is_dir():
+        app.mount(
+            "/dashboard",
+            StaticFiles(directory=dashboard_dir or DASHBOARD_DIST, html=True),
+            name="dashboard",
+        )
+
+        @app.get("/", include_in_schema=False)
+        def root() -> RedirectResponse:
+            return RedirectResponse("/dashboard/")
 
     return app

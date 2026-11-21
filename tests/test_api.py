@@ -399,3 +399,34 @@ class TestAuditChain:
         reopened = OperationsStore(path)
         assert reopened.verify_audit_chain().records == 2
         assert len(reopened.list_approvals(status="pending")) == 1
+
+
+def test_serves_built_dashboard_same_origin(services, tmp_path):
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<title>SpindleSage Operations</title>", "utf-8")
+    app = create_app(
+        Settings(db_path=":memory:", ai4i_path=None),
+        services,
+        ApiKeyRegistry.from_plain_keys(KEYS),
+        dashboard_dir=dist,
+    )
+    client = TestClient(app)
+    root = client.get("/", follow_redirects=False)
+    assert root.status_code == 307
+    assert root.headers["location"] == "/dashboard/"
+    page = client.get("/dashboard/")
+    assert page.status_code == 200
+    assert "SpindleSage Operations" in page.text
+    # Static files never bypass auth on data endpoints.
+    assert client.get("/machines").status_code == 401
+
+
+def test_no_dashboard_route_without_build(services, tmp_path):
+    app = create_app(
+        Settings(db_path=":memory:", ai4i_path=None),
+        services,
+        ApiKeyRegistry.from_plain_keys(KEYS),
+        dashboard_dir=tmp_path / "missing",
+    )
+    assert TestClient(app).get("/dashboard/").status_code == 404
