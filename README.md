@@ -4,9 +4,23 @@
 
 SpindleSage is an open-source platform for intelligent manufacturing operations. It combines industrial data acquisition, machine learning, anomaly detection and context-aware AI agents. It helps manufacturing teams understand machine condition, spot abnormal operating patterns, investigate likely failures and make maintenance decisions based on evidence.
 
-> **Status:** Research and architecture planning. Nothing here is production-ready. No industrial deployment or operational savings are claimed.
+> **Status: v0.1.0 research preview.** Every component runs end to end on simulated and synthetic data. Nothing here is production-ready, and no industrial deployment or operational savings are claimed. SpindleSage recommends; it never controls machines.
 
 **Core philosophy:** Observe → Understand → Predict → Recommend → Act → Verify.
+
+## Documentation
+
+| Read this | For |
+|---|---|
+| [Installation and running](docs/installation.md) | Setting up, reproducing the experiments, running the platform |
+| [Research report](docs/research-report.md) | Hypotheses, methods, results and limitations |
+| [Architecture](docs/architecture.md) | Components, the agent workflow and the safety design |
+| [Integrations](docs/integrations.md) | Read-only MQTT and OPC UA connectivity |
+| [Security](docs/security.md) | Threat model, controls and known gaps |
+| [Experiment log](research/experiment-log.md) | Every recorded run, with commits and caveats |
+| [Dependencies](docs/dependencies.md) | Licences and design decisions |
+| [Changelog](CHANGELOG.md) | What changed in each release |
+| [Project charter](docs/project-charter.md) | The original research plan |
 
 ---
 
