@@ -38,7 +38,8 @@ _FEATURE_TOPICS: dict[str, str] = {
     "temp_rise_k": "spindle overheating temperature rise coolant lubrication",
     "air_temperature_k": "ambient air temperature thermal",
     "torque_nm": "torque spike chipped tool breakage",
-    "mech_power_w": "cutting power overstrain torque",
+    # A torque spike at constant speed shows up as a power jump, so search both topics.
+    "mech_power_w": "torque spike chipped tool breakage cutting power overstrain",
     "rotational_speed_rpm": "spindle speed deviation drift drive belt encoder",
     "tool_wear_min": "tool wear limit replacement",
 }
