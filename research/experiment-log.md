@@ -41,6 +41,8 @@ Caveats:
 
 ### Experiment B: anomaly detection (SpindleSage CNC simulator, synthetic)
 
+> **Superseded for contextual features** by the "Experiment B with log-scale variability" entry below. The raw-feature rows are unchanged.
+
 Three machines, 30 s sampling. Per seed: 3 days of healthy training data, 1 day of healthy calibration data, then 3 days of test data with 8 injected faults per machine (24 events). Both detectors are calibrated to flag 0.2 % of healthy calibration samples and need 3 consecutive exceedances to alarm.
 
 | Detector / features | Detection recall | Detection precision | False alarms per hour | Median delay (min) |
@@ -66,5 +68,35 @@ Caveats and follow-ups:
 - **Speed drift is close to undetectable** without the commanded spindle speed, because a drifting spindle looks like a new job. Real controllers expose the commanded speed (for example over OPC UA), so add it to the telemetry schema and simulator.
 - **Sensor flatline** needs rolling-variability features; raw values alone never catch it.
 - Isolation Forest hyperparameters are defaults (200 trees, 256 samples per tree) and were not tuned.
+
+---
+
+## 2026-11-21: Experiment B with log-scale variability
+
+- **Code:** commit `0b82acf`
+- **Host:** development laptop, `--n-jobs 2`, seeds 0-4, same protocol as the first run
+- **Change:** rolling variability features now use log10 of the rolling standard deviation (floored at 1e-4), and each machine's first sample, which has no rolling history, is filled from the detector's training medians instead of 0.
+
+**Why:** while testing the operations agent, a torque sensor frozen for 90 minutes was not flagged. Rolling variability is very skewed (job changes raise it about 50-fold), so on a linear scale "no variation at all" sat only 0.02 band widths below normal noise. On a log scale it sits about 2 band widths below. The earlier fill of 0 also made each machine's first sample look frozen.
+
+| Detector / features | Detection recall | Detection precision | False alarms per hour | Median delay (min) |
+|---|---|---|---|---|
+| Threshold / raw | 0.567 +/- 0.124 | 0.729 +/- 0.232 | 0.057 +/- 0.070 | 19.5 +/- 7.6 |
+| Isolation Forest / raw | 0.083 +/- 0.078 | 0.388 +/- 0.335 | 0.070 +/- 0.106 | 20.4 +/- 10.0 |
+| Threshold / contextual | 0.808 +/- 0.076 | 0.874 +/- 0.075 | 0.021 +/- 0.015 | 5.0 +/- 0.7 |
+| Isolation Forest / contextual | 0.233 +/- 0.146 | 0.545 +/- 0.221 | 0.025 +/- 0.011 | 33.7 +/- 16.0 |
+
+Detection recall by fault type (mean across seeds):
+
+| Detector / features | Spindle overheat | Torque spike | Speed drift | Sensor flatline |
+|---|---|---|---|---|
+| Threshold / raw | 0.97 | 0.73 | 0.26 | 0.00 |
+| Isolation Forest / raw | 0.11 | 0.17 | 0.00 | 0.00 |
+| Threshold / contextual | 1.00 | 1.00 | 0.12 | 1.00 |
+| Isolation Forest / contextual | 0.38 | 0.31 | 0.00 | 0.17 |
+
+**Reading:** with contextual features the threshold detector's recall rises from 0.72 to 0.81, flatline recall from 0.63 to 1.00, and false alarms fall from 0.029 to 0.021 per hour. Raw-feature results are identical, as expected. Isolation Forest also improves but still trails. The remaining gap is speed drift (0.12), for the reason already recorded: telemetry without the commanded speed cannot separate drift from a job change. The simulator-bias caveat from the first run still applies.
+
+This change was found by running the agent on a scenario, not by tuning on Experiment B's test data. The test protocol and seeds are unchanged.
 
 ---
