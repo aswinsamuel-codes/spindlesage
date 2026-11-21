@@ -1,0 +1,57 @@
+"""Features for streaming anomaly detection on CNC telemetry.
+
+raw:        the five sensor readings as they arrive.
+contextual: raw plus per-machine rolling variability (catches frozen sensors)
+            and physics combinations (temperature rise over ambient, cutting
+            power) that separate faults from normal changes such as a new job.
+
+Rolling statistics only look backwards, so a score at time t never uses data
+from after t. They are computed per machine, never across machines.
+"""
+
+from __future__ import annotations
+
+import math
+from typing import Literal
+
+import pandas as pd
+
+from core.telemetry.schema import SENSOR_FIELDS
+
+AnomalyFeatureSet = Literal["raw", "contextual"]
+ANOMALY_FEATURE_SETS: tuple[str, ...] = ("raw", "contextual")
+
+# Tool wear rises steadily by design, so its rolling spread carries no signal.
+ROLLING_SENSORS: tuple[str, ...] = (
+    "air_temperature_k",
+    "process_temperature_k",
+    "rotational_speed_rpm",
+    "torque_nm",
+)
+
+
+def build_anomaly_features(
+    readings: pd.DataFrame, feature_set: AnomalyFeatureSet = "raw", window: int = 10
+) -> pd.DataFrame:
+    """Feature matrix aligned to readings.index.
+
+    readings needs timestamp, machine_id and the SENSOR_FIELDS columns.
+    """
+    if feature_set not in ANOMALY_FEATURE_SETS:
+        raise ValueError(f"Unknown feature_set {feature_set!r}; choose {ANOMALY_FEATURE_SETS}")
+    if window < 2:
+        raise ValueError("window must be at least 2 samples")
+
+    X = readings[list(SENSOR_FIELDS)].astype("float64").copy()
+    if feature_set == "raw":
+        return X
+
+    ordered = readings.sort_values(["machine_id", "timestamp"], kind="stable")
+    grouped = ordered.groupby("machine_id", sort=False)
+    for sensor in ROLLING_SENSORS:
+        spread = grouped[sensor].transform(lambda s: s.rolling(window, min_periods=2).std())
+        X[f"{sensor}_rolling_std"] = spread.reindex(readings.index).fillna(0.0)
+
+    X["temp_rise_k"] = X["process_temperature_k"] - X["air_temperature_k"]
+    X["mech_power_w"] = X["torque_nm"] * X["rotational_speed_rpm"] * 2.0 * math.pi / 60.0
+    return X

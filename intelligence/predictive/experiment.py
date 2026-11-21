@@ -15,18 +15,11 @@ what the H1 comparison should be based on, not a single lucky split.
 
 from __future__ import annotations
 
-import json
 import logging
-import os
-import platform
-import subprocess
 import time
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
-from importlib import metadata
 from pathlib import Path
 
-import numpy as np
 from sklearn.model_selection import StratifiedKFold, train_test_split
 
 from core.ingestion.ai4i import DEFAULT_PATH, TARGET, load_ai4i, sha256_file
@@ -37,12 +30,11 @@ from intelligence.evaluation.classification import (
     mean_std,
     measure_latency,
 )
+from intelligence.evaluation.provenance import environment, utc_now_iso, write_run
 from intelligence.predictive.features import FEATURE_SETS, build_features
 from intelligence.predictive.models import MODEL_NAMES, make_model
 
 log = logging.getLogger(__name__)
-
-TRACKED_PACKAGES = ("numpy", "pandas", "scikit-learn", "xgboost", "pydantic")
 
 
 @dataclass(frozen=True)
@@ -74,35 +66,6 @@ def _score(model, X, y, threshold: float) -> dict:
     y_score = model.predict_proba(X)[:, 1]
     y_pred = (y_score >= threshold).astype(int)
     return classification_metrics(y, y_pred, y_score)
-
-
-def _git_revision() -> dict:
-    def run(*args: str) -> str:
-        return subprocess.run(
-            ["git", *args], capture_output=True, text=True, check=True, timeout=10
-        ).stdout.strip()
-
-    try:
-        return {"commit": run("rev-parse", "HEAD"), "dirty": bool(run("status", "--porcelain"))}
-    except (OSError, subprocess.SubprocessError):
-        return {"commit": None, "dirty": None}
-
-
-def _environment() -> dict:
-    versions = {}
-    for package in TRACKED_PACKAGES:
-        try:
-            versions[package] = metadata.version(package)
-        except metadata.PackageNotFoundError:
-            versions[package] = None
-    return {
-        "python": platform.python_version(),
-        "platform": platform.platform(),
-        "host": platform.node(),
-        "cpu_count": os.cpu_count(),
-        "packages": versions,
-        "git": _git_revision(),
-    }
 
 
 def run_experiment_a(config: ExperimentAConfig) -> dict:
@@ -177,7 +140,7 @@ def run_experiment_a(config: ExperimentAConfig) -> dict:
 
     return {
         "experiment": "A: predictive maintenance model comparison",
-        "created_utc": datetime.now(UTC).isoformat(timespec="seconds"),
+        "created_utc": utc_now_iso(),
         "config": {**asdict(config), "data_path": str(data_path)},
         "dataset": {
             "id": "ai4i2020",
@@ -188,7 +151,7 @@ def run_experiment_a(config: ExperimentAConfig) -> dict:
             "features": list(X.columns),
             "validation": validation.to_dict(),
         },
-        "environment": _environment(),
+        "environment": environment(),
         "summary": summary,
         "runs": runs,
     }
@@ -229,19 +192,5 @@ def render_summary_markdown(results: dict) -> str:
 
 
 def write_results(results: dict, output_dir: Path) -> Path:
-    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    run_dir = Path(output_dir) / f"{stamp}_{results['config']['feature_set']}"
-    run_dir.mkdir(parents=True, exist_ok=False)
-    (run_dir / "results.json").write_text(
-        json.dumps(results, indent=2, default=_json_default), "utf-8"
-    )
-    (run_dir / "summary.md").write_text(render_summary_markdown(results), "utf-8")
-    return run_dir
-
-
-def _json_default(value):
-    if isinstance(value, Path):
-        return str(value)
-    if isinstance(value, np.generic):
-        return value.item()
-    raise TypeError(f"Not JSON serialisable: {type(value).__name__}")
+    label = results["config"]["feature_set"]
+    return write_run(results, output_dir, label, render_summary_markdown(results))
