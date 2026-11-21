@@ -7,6 +7,9 @@ higher means more anomalous. They are compared on equal terms:
    the same fraction of a separate healthy calibration set;
 2. apply_alarm_policy() raises an alarm only after `persistence` consecutive
    samples exceed that threshold, for every detector alike.
+
+Missing feature values (a machine's first sample has no rolling history) are
+filled with the median each detector learned from its healthy training data.
 """
 
 from __future__ import annotations
@@ -18,7 +21,19 @@ from sklearn.ensemble import IsolationForest
 DETECTOR_NAMES: tuple[str, ...] = ("threshold", "isolation_forest")
 
 
-class ThresholdDetector:
+class _ImputingDetector:
+    """Learns per-column medians on healthy data and uses them to fill gaps."""
+
+    def _learn_columns(self, X: pd.DataFrame) -> pd.DataFrame:
+        self.columns_ = list(X.columns)
+        self.fill_ = X.median()
+        return self._prepare(X)
+
+    def _prepare(self, X: pd.DataFrame) -> pd.DataFrame:
+        return X[self.columns_].fillna(self.fill_)
+
+
+class ThresholdDetector(_ImputingDetector):
     """Static per-feature alarm limits learned from healthy data.
 
     Score: the largest signed distance outside the [quantile, 1 - quantile]
@@ -31,21 +46,29 @@ class ThresholdDetector:
         self.quantile = quantile
 
     def fit(self, X: pd.DataFrame) -> ThresholdDetector:
-        self.columns_ = list(X.columns)
+        X = self._learn_columns(X)
         self.low_ = X.quantile(self.quantile).to_numpy(dtype=float)
         self.high_ = X.quantile(1.0 - self.quantile).to_numpy(dtype=float)
         width = self.high_ - self.low_
         self.width_ = np.where(width > 0, width, 1.0)
         return self
 
-    def score(self, X: pd.DataFrame) -> np.ndarray:
-        values = X[self.columns_].to_numpy(dtype=float)
+    def exceedance(self, X: pd.DataFrame) -> pd.DataFrame:
+        """Signed distance outside each feature's healthy band, in band widths.
+
+        Positive values say which features are out of band and by how much,
+        which is what makes this detector's alarms explainable.
+        """
+        values = self._prepare(X).to_numpy(dtype=float)
         above = (values - self.high_) / self.width_
         below = (self.low_ - values) / self.width_
-        return np.maximum(above, below).max(axis=1)
+        return pd.DataFrame(np.maximum(above, below), index=X.index, columns=self.columns_)
+
+    def score(self, X: pd.DataFrame) -> np.ndarray:
+        return self.exceedance(X).to_numpy().max(axis=1)
 
 
-class IsolationForestDetector:
+class IsolationForestDetector(_ImputingDetector):
     """Isolation Forest (Liu et al., 2008) on the same features."""
 
     def __init__(self, n_estimators: int = 200, seed: int = 0, n_jobs: int = 1):
@@ -54,15 +77,15 @@ class IsolationForestDetector:
         self.n_jobs = n_jobs
 
     def fit(self, X: pd.DataFrame) -> IsolationForestDetector:
-        self.columns_ = list(X.columns)
+        X = self._learn_columns(X)
         self.model_ = IsolationForest(
             n_estimators=self.n_estimators, random_state=self.seed, n_jobs=self.n_jobs
-        ).fit(X[self.columns_].to_numpy(dtype=float))
+        ).fit(X.to_numpy(dtype=float))
         return self
 
     def score(self, X: pd.DataFrame) -> np.ndarray:
         # score_samples is higher for normal points; negate so higher = more anomalous.
-        return -self.model_.score_samples(X[self.columns_].to_numpy(dtype=float))
+        return -self.model_.score_samples(self._prepare(X).to_numpy(dtype=float))
 
 
 def make_detector(name: str, *, seed: int = 0, n_jobs: int = 1):

@@ -90,6 +90,10 @@ class SimulationConfig:
     min_fault_duration: timedelta = timedelta(minutes=30)
     max_fault_duration: timedelta = timedelta(hours=2)
     seed: int = 0
+    # Faults placed at exact times, in addition to the random ones. Used for
+    # reproducible scenarios (demos, Experiment C). Avoid overlapping them with
+    # random faults by setting faults_per_machine=0.
+    scheduled_faults: tuple[FaultEvent, ...] = ()
 
     def __post_init__(self) -> None:
         if self.n_machines < 1:
@@ -107,6 +111,16 @@ class SimulationConfig:
             raise ValueError(f"fault_types must be a non-empty subset of {FAULT_TYPES}")
         if not timedelta(0) < self.min_fault_duration <= self.max_fault_duration:
             raise ValueError("need 0 < min_fault_duration <= max_fault_duration")
+        known_machines = {machine_id_for(i) for i in range(self.n_machines)}
+        for fault in self.scheduled_faults:
+            if fault.machine_id not in known_machines:
+                raise ValueError(f"Scheduled fault on unknown machine {fault.machine_id!r}")
+            if fault.fault_type not in FAULT_TYPES:
+                raise ValueError(f"Unknown scheduled fault type {fault.fault_type!r}")
+            if fault.end <= fault.start:
+                raise ValueError("Scheduled fault must end after it starts")
+            if fault.fault_type == "sensor_flatline" and fault.sensor not in FLATLINE_SENSORS:
+                raise ValueError(f"sensor_flatline needs a sensor from {FLATLINE_SENSORS}")
 
     @property
     def n_samples(self) -> int:
@@ -192,6 +206,8 @@ def _simulate_machine(
 
     machine_id = machine_id_for(index)
     events = _place_faults(machine_id, times, config, rng)
+    events += [f for f in config.scheduled_faults if f.machine_id == machine_id]
+    events.sort(key=lambda e: e.start)
     is_anomaly = np.zeros(n, dtype=bool)
     fault_type = np.full(n, NO_FAULT, dtype=object)
     for event in events:

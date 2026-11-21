@@ -1,0 +1,89 @@
+{
+  "data_nature": "synthetic",
+  "note": "Illustrative machine records and maintenance history for the SpindleSage simulated CNC cell. Not real equipment.",
+  "machines": [
+    {
+      "machine_id": "cnc-sim-01",
+      "name": "Simulated VMC 1",
+      "model": "Simulated 3-axis vertical machining centre",
+      "product_type": "L",
+      "commissioned": "2023-03-14",
+      "spindle_max_rpm": 12000,
+      "location": "Cell A, station 1"
+    },
+    {
+      "machine_id": "cnc-sim-02",
+      "name": "Simulated VMC 2",
+      "model": "Simulated 3-axis vertical machining centre",
+      "product_type": "M",
+      "commissioned": "2023-03-14",
+      "spindle_max_rpm": 12000,
+      "location": "Cell A, station 2"
+    },
+    {
+      "machine_id": "cnc-sim-03",
+      "name": "Simulated VMC 3",
+      "model": "Simulated 3-axis vertical machining centre",
+      "product_type": "H",
+      "commissioned": "2024-09-02",
+      "spindle_max_rpm": 15000,
+      "location": "Cell A, station 3"
+    }
+  ],
+  "maintenance_history": [
+    {
+      "record_id": "MR-0101",
+      "machine_id": "cnc-sim-01",
+      "date": "2025-10-20",
+      "kind": "preventive",
+      "component": "coolant system",
+      "description": "Replaced coolant filter and topped up coolant concentrate.",
+      "outcome": "completed"
+    },
+    {
+      "record_id": "MR-0102",
+      "machine_id": "cnc-sim-01",
+      "date": "2025-12-08",
+      "kind": "corrective",
+      "component": "spindle bearings",
+      "description": "Spindle bearings replaced after vibration complaint; preload set to upper end of range.",
+      "outcome": "completed"
+    },
+    {
+      "record_id": "MR-0103",
+      "machine_id": "cnc-sim-01",
+      "date": "2025-12-29",
+      "kind": "inspection",
+      "component": "spindle",
+      "description": "Post-repair check: spindle ran warmer than before under load; flagged for monitoring.",
+      "outcome": "monitor"
+    },
+    {
+      "record_id": "MR-0201",
+      "machine_id": "cnc-sim-02",
+      "date": "2025-11-12",
+      "kind": "preventive",
+      "component": "spindle drive belt",
+      "description": "Drive belt tension checked; belt showing early wear, replacement planned.",
+      "outcome": "follow_up_planned"
+    },
+    {
+      "record_id": "MR-0202",
+      "machine_id": "cnc-sim-02",
+      "date": "2025-12-15",
+      "kind": "corrective",
+      "component": "torque sensor cable",
+      "description": "Intermittent torque readings traced to a loose connector; connector reseated.",
+      "outcome": "completed"
+    },
+    {
+      "record_id": "MR-0301",
+      "machine_id": "cnc-sim-03",
+      "date": "2025-11-30",
+      "kind": "preventive",
+      "component": "tooling",
+      "description": "Tool change interval reviewed for harder H-grade material; interval shortened to 180 minutes.",
+      "outcome": "completed"
+    }
+  ]
+}

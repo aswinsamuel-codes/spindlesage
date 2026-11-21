@@ -146,6 +146,28 @@ uv run python -m integrations.simulator --days 1 --machines 3 --faults 4 --out d
 
 This writes the readings CSV and a `.events.json` file with each fault's machine, type, start and end.
 
+## Operations agent
+
+The agent turns telemetry into an evidence-cited maintenance recommendation. It runs as a fixed workflow, so every step can be audited:
+
+1. **Gather evidence** with read-only tools: latest readings and a window summary, validation, anomaly status (the threshold detector, chosen from Experiment B), failure risk (XGBoost from Experiment A), the machine record, maintenance history, and maintenance manual sections found by BM25 retrieval. Each item gets an id such as `ANO-1` or `DOC-2`.
+2. **Reason** with Claude (one structured-output call) or with transparent rules. Every finding and action must cite evidence ids.
+3. **Guard:** citations that don't exist, uncited claims, or high risk without supporting evidence make the output unusable. The agent then falls back to the rule-based engine and records why.
+4. **Approve:** the agent never acts. Any action other than continued monitoring is returned as `pending_approval`.
+
+```bash
+# No API key needed (rule-based engine)
+uv run python -m intelligence.agent --scenario spindle_overheat
+
+# Claude engine: needs ANTHROPIC_API_KEY (or `ant auth login`); falls back to rules if unavailable
+uv run python -m intelligence.agent --scenario torque_spike --engine claude
+
+# Sensor-only context, the baseline for Experiment C
+uv run python -m intelligence.agent --scenario torque_spike --mode sensor_only
+```
+
+Scenarios: `healthy`, `spindle_overheat`, `torque_spike`, `speed_drift` and `sensor_flatline`. All of them are simulated. The maintenance manuals in `knowledge/` are illustrative documents written for the simulated cell (see [knowledge/README.md](knowledge/README.md)).
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).

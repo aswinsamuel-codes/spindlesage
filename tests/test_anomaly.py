@@ -33,12 +33,30 @@ class TestFeatures:
         X = build_anomaly_features(healthy, "raw")
         assert X.shape == (len(healthy), 5)
 
-    def test_contextual_has_no_gaps_and_aligns(self, healthy):
+    def test_contextual_aligns_and_only_first_sample_is_missing(self, healthy):
         shuffled = healthy.sample(frac=1.0, random_state=0)
         X = build_anomaly_features(shuffled, "contextual", window=5)
         assert X.index.equals(shuffled.index)
-        assert not X.isna().any().any()
-        assert {"temp_rise_k", "mech_power_w", "torque_nm_rolling_std"} <= set(X.columns)
+        assert {"temp_rise_k", "mech_power_w", "torque_nm_log_rolling_std"} <= set(X.columns)
+        # Only each machine's first sample lacks rolling history.
+        first = healthy.groupby("machine_id")["timestamp"].idxmin()
+        missing = X.index[X.isna().any(axis=1)]
+        assert set(missing) == set(first)
+
+    def test_frozen_signal_is_far_below_normal_variability(self, healthy):
+        frozen = healthy.copy()
+        rows = frozen.index[frozen["machine_id"] == "cnc-sim-01"][-30:]
+        frozen.loc[rows, "torque_nm"] = frozen.loc[rows[0], "torque_nm"]
+        X = build_anomaly_features(frozen, "contextual", window=10)
+        normal = build_anomaly_features(healthy, "contextual", window=10)
+        col = "torque_nm_log_rolling_std"
+        assert X.loc[rows[-1], col] < normal[col].quantile(0.001) - 1.0
+
+    def test_detectors_fill_missing_values_from_training(self, healthy):
+        X = build_anomaly_features(healthy, "contextual", window=5)
+        for detector in (ThresholdDetector(), IsolationForestDetector(seed=0)):
+            scores = detector.fit(X).score(X)
+            assert np.isfinite(scores).all()
 
     def test_rolling_is_per_machine_and_backward_looking(self, healthy):
         X = build_anomaly_features(healthy, "contextual", window=5)

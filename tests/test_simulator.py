@@ -141,3 +141,40 @@ def test_cli_writes_csv_and_events(tmp_path, capsys):
     assert len(events["events"]) == 1
     assert datetime.fromisoformat(events["events"][0]["start"]).tzinfo == UTC
     assert "synthetic" in capsys.readouterr().out
+
+
+def test_scheduled_fault_is_applied_and_labelled():
+    from integrations.simulator.cnc import FaultEvent
+
+    start = datetime(2026, 1, 5, 6, tzinfo=UTC)
+    fault = FaultEvent("cnc-sim-02", "torque_spike", start, start + timedelta(hours=1), 0.5)
+    result = simulate_cell(_config(scheduled_faults=(fault,)))
+    assert result.events == (fault,)
+    df = result.readings
+    window = (df["machine_id"] == "cnc-sim-02") & (df["timestamp"] >= start)
+    window &= df["timestamp"] < fault.end
+    assert df.loc[window, "is_anomaly"].all()
+    assert df["is_anomaly"].sum() == window.sum()
+
+
+@pytest.mark.parametrize(
+    "fault_kwargs",
+    [
+        {"machine_id": "cnc-sim-09"},
+        {"fault_type": "gremlins"},
+        {"fault_type": "sensor_flatline", "sensor": None},
+    ],
+)
+def test_scheduled_fault_validation(fault_kwargs):
+    from integrations.simulator.cnc import FaultEvent
+
+    start = datetime(2026, 1, 5, 6, tzinfo=UTC)
+    base = {
+        "machine_id": "cnc-sim-01",
+        "fault_type": "torque_spike",
+        "start": start,
+        "end": start + timedelta(hours=1),
+        "magnitude": 0.5,
+    }
+    with pytest.raises(ValueError):
+        _config(scheduled_faults=(FaultEvent(**{**base, **fault_kwargs}),))
