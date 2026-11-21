@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from apps.api.auth import ApiKeyRegistry
+from apps.api.security import FailedAuthThrottle, SecurityMiddleware
 from apps.api.services import Services, build_services
 from apps.api.settings import Settings
 from core.event_engine.approvals import ApprovalError
@@ -48,18 +49,24 @@ def create_app(
     services: Services | None = None,
     keys: ApiKeyRegistry | None = None,
     dashboard_dir: Path | None = None,
+    throttle: FailedAuthThrottle | None = None,
 ) -> FastAPI:
     settings = settings or Settings.from_env()
     services = services or build_services(settings)
     keys = keys if keys is not None else ApiKeyRegistry.from_file(settings.api_keys_file)
 
+    docs = settings.expose_docs
     app = FastAPI(
         title="SpindleSage API",
         version=API_VERSION,
         description="Evidence-grounded maintenance recommendations with human approval. "
         "All data in this research build is simulated or from synthetic benchmarks.",
+        docs_url="/docs" if docs else None,
+        redoc_url="/redoc" if docs else None,
+        openapi_url="/openapi.json" if docs else None,
     )
     app.state.services = services
+    app.add_middleware(SecurityMiddleware, throttle=throttle or FailedAuthThrottle())
 
     @app.exception_handler(ApprovalError)
     async def approval_error(_: Request, exc: ApprovalError) -> JSONResponse:

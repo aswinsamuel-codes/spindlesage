@@ -35,6 +35,7 @@ asyncua is LGPL-3.0. SpindleSage imports it unmodified as a separate library, wh
 | pytest | MIT | Tests |
 | httpx | BSD-3-Clause | FastAPI test client |
 | amqtt | MIT | In-process MQTT broker for integration tests |
+| pytest-cov | MIT | Coverage measurement |
 | asyncua | LGPL-3.0 | OPC UA integration tests |
 | ruff | MIT | Linting and formatting |
 

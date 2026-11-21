@@ -237,7 +237,20 @@ uv run python -m integrations.mqtt publish --scenario torque_spike
 uv run python -m integrations.mqtt bridge
 ```
 
-Topic scheme, OPC UA address space, security options and limits: [docs/integrations.md](docs/integrations.md). All of them are simulated. The maintenance manuals in `knowledge/` are illustrative documents written for the simulated cell (see [knowledge/README.md](knowledge/README.md)).
+Topic scheme, OPC UA address space, security options and limits: [docs/integrations.md](docs/integrations.md).
+
+### Experiment C: agent recommendation quality
+
+Scores the agent on 100 simulated cases (5 scenarios x 5 seeds x 2 fault stages x a faulty and a healthy machine) in `full` and `sensor_only` context: correctness, fault detection, false alarms, right-manual citation, evidence attribution, unsupported claims, approval compliance, latency and cost.
+
+```bash
+uv run python -m experiments.exp_c_agent                          # rule-based engine, free
+uv run python -m experiments.exp_c_agent --engines rules claude   # adds Claude; asks before spending
+```
+
+## Security
+
+Threat model, controls and known gaps: [docs/security.md](docs/security.md). CI runs bandit, pip-audit and npm audit on every push, and the test suite (91% coverage, minimum 80%) covers the access-control, approval, audit and read-only guarantees. All of them are simulated. The maintenance manuals in `knowledge/` are illustrative documents written for the simulated cell (see [knowledge/README.md](knowledge/README.md)).
 
 ## Contributing
 

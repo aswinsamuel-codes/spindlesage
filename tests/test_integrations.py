@@ -366,7 +366,8 @@ def test_opcua_end_to_end_and_read_only(api):
         server = SimulatedCellServer(endpoint, "spindle_overheat", speed=600, hours=0.5)
         stop = asyncio.Event()
         server_task = asyncio.create_task(server.run(stop))
-        await asyncio.wait_for(server.ready.wait(), 20)
+        # Generous: asyncua loads its full address space, which is slow under coverage.
+        await asyncio.wait_for(server.ready.wait(), 120)
         collector = OpcUaCollector(endpoint, forwarder.add, interval_s=0.06)
         await collector.run(max_polls=12)
 

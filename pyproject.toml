@@ -28,6 +28,7 @@ dev = [
     "asyncua>=1.1",
     "httpx>=0.27",
     "pytest>=8.3",
+    "pytest-cov>=6.0",
     "ruff>=0.8",
 ]
 
@@ -45,3 +46,11 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.coverage.run]
+source = ["apps", "core", "integrations", "intelligence", "experiments"]
+omit = ["apps/dashboard/*"]
+
+[tool.coverage.report]
+fail_under = 80
+skip_empty = true

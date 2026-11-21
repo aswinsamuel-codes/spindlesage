@@ -36,8 +36,10 @@ def load_metadata(path: Path = METADATA_PATH) -> dict:
 
 
 def fetch(url: str, timeout: float = 60.0) -> bytes:
+    if not url.startswith("https://"):
+        raise ValueError(f"Refusing to download over a non-HTTPS URL: {url!r}")
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    with urllib.request.urlopen(request, timeout=timeout) as response:  # nosec B310 (https only)
         return response.read()
 
 

@@ -44,6 +44,13 @@ def ingest_key_from_env() -> str:
 
 
 def urllib_post(base_url: str, api_key: str, timeout: float = 10.0) -> PostFn:
+    if not base_url.startswith(("http://", "https://")):
+        raise ValueError(f"API URL must start with http:// or https://, got {base_url!r}")
+    if base_url.startswith("http://") and not base_url.startswith(
+        ("http://127.0.0.1", "http://localhost", "http://[::1]")
+    ):
+        log.warning("Sending the ingest key over plain HTTP to %s; use HTTPS", base_url)
+
     def post(path: str, body: dict) -> tuple[int, dict | None]:
         request = urllib.request.Request(
             base_url.rstrip("/") + path,
@@ -52,7 +59,8 @@ def urllib_post(base_url: str, api_key: str, timeout: float = 10.0) -> PostFn:
             method="POST",
         )
         try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
+            # Scheme restricted to http(s) above.
+            with urllib.request.urlopen(request, timeout=timeout) as response:  # nosec B310
                 return response.status, json.loads(response.read() or b"null")
         except urllib.error.HTTPError as exc:
             try:

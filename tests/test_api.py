@@ -430,3 +430,65 @@ def test_no_dashboard_route_without_build(services, tmp_path):
         dashboard_dir=tmp_path / "missing",
     )
     assert TestClient(app).get("/dashboard/").status_code == 404
+
+
+class TestHardening:
+    def test_security_headers_on_api(self, client):
+        response = client.get("/machines", headers=h("k-viewer"))
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
+        assert response.headers["X-Frame-Options"] == "DENY"
+        assert response.headers["Cache-Control"] == "no-store"
+
+    def test_dashboard_gets_strict_csp(self, services, tmp_path):
+        dist = tmp_path / "dist"
+        dist.mkdir()
+        (dist / "index.html").write_text("<title>x</title>", "utf-8")
+        app = create_app(Settings(db_path=":memory:", ai4i_path=None), services,
+                         ApiKeyRegistry.from_plain_keys(KEYS), dashboard_dir=dist)  # fmt: skip
+        csp = TestClient(app).get("/dashboard/").headers["Content-Security-Policy"]
+        assert "script-src 'self'" in csp
+        assert "frame-ancestors 'none'" in csp
+        assert "unsafe-inline" not in csp
+
+    def test_oversized_body_rejected(self, client):
+        response = client.post(
+            "/telemetry",
+            headers={**h("k-ingest"), "Content-Length": str(2 * 1024 * 1024)},
+            content=b"{}",
+        )
+        assert response.status_code == 413
+
+    def test_failed_auth_is_throttled_and_logged(self, services, caplog):
+        from apps.api.security import FailedAuthThrottle
+
+        app = create_app(Settings(db_path=":memory:", ai4i_path=None), services,
+                         ApiKeyRegistry.from_plain_keys(KEYS),
+                         throttle=FailedAuthThrottle(limit=3, window_s=60))  # fmt: skip
+        test_client = TestClient(app)
+        with caplog.at_level("WARNING", logger="spindlesage.security"):
+            codes = [test_client.get("/machines", headers=h(f"guess-{i}")).status_code
+                     for i in range(4)]  # fmt: skip
+        assert codes == [401, 401, 401, 429]
+        # Even a valid key is refused while the client is throttled.
+        assert test_client.get("/machines", headers=h("k-viewer")).status_code == 429
+        assert "Failed authentication" in caplog.text
+        assert "guess-0" not in caplog.text
+
+    def test_throttle_window_expires(self):
+        from apps.api.security import FailedAuthThrottle
+
+        now = [0.0]
+        throttle = FailedAuthThrottle(limit=2, window_s=10, clock=lambda: now[0])
+        throttle.record_failure("1.2.3.4")
+        throttle.record_failure("1.2.3.4")
+        assert throttle.blocked("1.2.3.4")
+        assert not throttle.blocked("5.6.7.8")
+        now[0] = 11.0
+        assert not throttle.blocked("1.2.3.4")
+
+    def test_docs_can_be_hidden(self, services):
+        app = create_app(Settings(db_path=":memory:", ai4i_path=None, expose_docs=False),
+                         services, ApiKeyRegistry.from_plain_keys(KEYS))  # fmt: skip
+        test_client = TestClient(app)
+        assert test_client.get("/docs").status_code == 404
+        assert test_client.get("/openapi.json").status_code == 404

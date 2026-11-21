@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 import platform
-import subprocess
+import subprocess  # nosec B404 (used only to read the git revision)
 from datetime import UTC, datetime
 from importlib import metadata
 from pathlib import Path
@@ -21,7 +21,8 @@ TRACKED_PACKAGES: tuple[str, ...] = ("numpy", "pandas", "scikit-learn", "xgboost
 
 def git_revision() -> dict:
     def run(*args: str) -> str:
-        return subprocess.run(
+        # Fixed "git" command with constant arguments and no shell; resolved via PATH.
+        return subprocess.run(  # nosec B603 B607
             ["git", *args], capture_output=True, text=True, check=True, timeout=10
         ).stdout.strip()
 

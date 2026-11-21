@@ -7,6 +7,7 @@ SPINDLESAGE_ENGINE            rules (default) or claude
 SPINDLESAGE_DEMO_SCENARIO     preload simulated telemetry: healthy, spindle_overheat, ...
 SPINDLESAGE_APPROVAL_TTL_HOURS  default 8
 SPINDLESAGE_AI4I_PATH         default datasets/raw/ai4i2020/ai4i2020.csv
+SPINDLESAGE_EXPOSE_DOCS       1 (default) or 0 to hide /docs and /openapi.json
 """
 
 from __future__ import annotations
@@ -27,6 +28,8 @@ class Settings:
     approval_ttl_hours: float = 8.0
     ai4i_path: Path | None = AI4I_DEFAULT
     seed: int = 0
+    # Interactive API docs at /docs. Set SPINDLESAGE_EXPOSE_DOCS=0 to hide them.
+    expose_docs: bool = True
 
     def __post_init__(self) -> None:
         if self.engine not in ("rules", "claude"):
@@ -47,4 +50,5 @@ class Settings:
             demo_scenario=os.environ.get("SPINDLESAGE_DEMO_SCENARIO") or None,
             approval_ttl_hours=float(os.environ.get("SPINDLESAGE_APPROVAL_TTL_HOURS", "8")),
             ai4i_path=Path(ai4i) if ai4i else AI4I_DEFAULT,
+            expose_docs=os.environ.get("SPINDLESAGE_EXPOSE_DOCS", "1") not in ("0", "false"),
         )

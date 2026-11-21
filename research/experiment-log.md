@@ -100,3 +100,36 @@ Detection recall by fault type (mean across seeds):
 This change was found by running the agent on a scenario, not by tuning on Experiment B's test data. The test protocol and seeds are unchanged.
 
 ---
+
+## 2026-11-22: Experiment C, agent recommendation quality (rule-based engine)
+
+- **Code:** commit `b98948d` (scoring added in `3153294`)
+- **Host:** development laptop. The rule-based engine only (no LLM calls), about 10 s per run
+- **Design:** 5 scenarios x 5 seeds x 2 stages (20 and 90 minutes into the fault) x 2 machines (the faulty `cnc-sim-01` and the healthy `cnc-sim-02`) = 100 cases, each run with `full` and `sensor_only` context. The failure-risk model (Experiment A XGBoost) is loaded.
+
+### Held-out seeds 5-9 (headline)
+
+| Engine / context | Accuracy | Fault detection | False alarms | Right action | Right manual cited | Attribution | Unsupported claims / run | Approval compliance |
+|---|---|---|---|---|---|---|---|---|
+| rules / full | 91% | 78% | 0% | 78% | 78% | 100% | 0.00 | 100% |
+| rules / sensor_only | 60% | 0% | 0% | 0% | 0% | 100% | 0.00 | 100% |
+
+Accuracy by scenario, early / late: healthy 100 / 100, spindle overheat 100 / 100, torque spike 100 / 100, speed drift 0 / 20, sensor flatline 100 / 100 (full context). Sensor-only context gets every healthy case right and misses every fault.
+
+### Seeds 0-4
+
+Before the retrieval fix below: full context 90% accuracy, right manual cited 60%. After the fix: 90% accuracy, right manual cited 75%. Sensor-only context is unchanged at 60% accuracy and 0% detection.
+
+**Change found by this experiment:** torque spikes that alarm mainly on *cutting power* retrieved only the overstrain manual, never the "torque spike = chipped tool" section. The power feature's retrieval topic now includes the torque-spike terms (`b98948d`). Because the problem was found on seeds 0-4, seeds 5-9 were held out to confirm the fix (78% right-manual citation on unseen seeds).
+
+**Reading:**
+- *H2 (context helps):* with the same deterministic engine, adding anomaly status, history and manuals raises fault detection from 0% to 78% without any false alarms on healthy machines. Sensor-only context, judged against the default operating envelope, never flags these faults, even 90 minutes in. This supports the direction of H2, but it is not yet a test of H2 for an LLM agent.
+- *H3 (structured outputs and evidence reduce unsupported claims):* the rule engine produces zero unsupported claims by construction, so this run is only a baseline. H3 needs the Claude engine and, ideally, a free-text baseline without structured output or a guard.
+- *H4 (approval):* every operational action in all 200 runs opened a pending approval request and none was auto-approved. Together with the workflow tests (only leads decide, four-eyes rule, expiry, tamper-evident audit), this supports H4 *for the implemented workflow*.
+- *Speed drift* remains the blind spot (0-20%), as in Experiment B: without the commanded spindle speed, no context fixes it.
+
+**Caveats:** all cases are simulated, and the rule engine was written alongside these scenarios, so its scores show what the evidence allows rather than what an LLM would do. The scenario set is small (5 fault types, one fault magnitude each).
+
+**Next:** run `--engines rules claude` (200 Claude calls at effort `high`; needs an API key and approval of the cost) to test H2 and H3 with an LLM.
+
+---

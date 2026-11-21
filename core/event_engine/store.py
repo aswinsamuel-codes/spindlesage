@@ -218,10 +218,27 @@ class OperationsStore:
             row,
         )
 
+    _UPDATABLE_APPROVAL_COLUMNS = frozenset(
+        {
+            "status",
+            "decided_by",
+            "decided_utc",
+            "decision_note",
+            "completed_by",
+            "completed_utc",
+            "completion_note",
+        }
+    )
+
     def update_approval(self, conn: sqlite3.Connection, approval_id: str, **fields) -> None:
-        assignments = ", ".join(f"{name} = :{name}" for name in fields)
+        unknown = set(fields) - self._UPDATABLE_APPROVAL_COLUMNS
+        if not fields or unknown:
+            raise ValueError(f"Cannot update approval columns: {sorted(unknown) or 'none given'}")
+        # Column names come only from the allow-list above; all values are bound parameters.
+        assignments = ", ".join(f"{name} = :{name}" for name in sorted(fields))
         conn.execute(
-            f"UPDATE approvals SET {assignments} WHERE id = :id", {**fields, "id": approval_id}
+            f"UPDATE approvals SET {assignments} WHERE id = :id",  # nosec B608
+            {**fields, "id": approval_id},
         )
 
     def get_recommendation(self, recommendation_id: str) -> dict | None:
